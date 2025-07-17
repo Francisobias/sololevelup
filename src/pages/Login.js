@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, provider } from '../firebase'; // Ensure this path is correct
+import React, { useState, useEffect } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase'; // Ensure this path is correct
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './Login.css';
@@ -9,38 +9,34 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
+
+  // Load saved email from localStorage on component mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // Save email to localStorage if "Remember Me" is checked
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
       navigate('/dashboard');
     } catch (err) {
       setError('Invalid email or password');
       console.error('Email/Password Login Error:', err.message); // For debugging
     }
   };
-
-  const handleGoogleLogin = async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      console.log("User info:", user); // 👈 log email/displayName/etc
-      navigate('/dashboard');
-    } catch (err) {
-      setError('Google Sign-In failed');
-      console.error('Google Sign-In Error:', err.message, err.code);
-      if (err.code === 'auth/popup-closed-by-user') {
-        setError('Popup was closed by the user.');
-      } else if (err.code === 'auth/unauthorized-domain') {
-        setError('Unauthorized domain. Check Firebase settings.');
-      } else {
-        setError(err.message);
-      }
-    }
-  };
-  
 
   return (
     <div className="login-page">
@@ -73,6 +69,15 @@ function Login() {
             className="login-input"
             required
           />
+          <div className="remember-me">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              id="rememberMe"
+            />
+            <label htmlFor="rememberMe">Remember Me</label>
+          </div>
           <motion.button 
             type="submit" 
             className="login-button"
@@ -82,19 +87,6 @@ function Login() {
             Log In
           </motion.button>
         </form>
-
-        <div className="google-section">
-          <p className="or-text">OR</p>
-          <motion.button
-            onClick={handleGoogleLogin}
-            className="google-button"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <img src="/icons/google-icon.svg" alt="Google" className="google-icon" />
-            Continue with Google
-          </motion.button>
-        </div>
 
         {error && <p className="login-error">{error}</p>}
 
