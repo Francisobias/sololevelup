@@ -24,21 +24,23 @@ function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      await signInWithPopup(auth, provider); // Removed unused 'result'
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log("User info:", user); // 👈 log email/displayName/etc
       navigate('/dashboard');
     } catch (err) {
       setError('Google Sign-In failed');
-      console.error('Google Sign-In Error:', err.message); // For debugging
-      // Check specific Firebase errors
+      console.error('Google Sign-In Error:', err.message, err.code);
       if (err.code === 'auth/popup-closed-by-user') {
         setError('Popup was closed by the user.');
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        setError('Popup request was cancelled.');
       } else if (err.code === 'auth/unauthorized-domain') {
-        setError('Unauthorized domain. Please check Firebase settings.');
+        setError('Unauthorized domain. Check Firebase settings.');
+      } else {
+        setError(err.message);
       }
     }
   };
+  
 
   return (
     <div className="login-page">
