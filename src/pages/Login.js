@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, provider } from '../firebase';
+import { auth, provider } from '../firebase'; // Ensure this path is correct
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './Login.css';
@@ -18,15 +18,25 @@ function Login() {
       navigate('/dashboard');
     } catch (err) {
       setError('Invalid email or password');
+      console.error('Email/Password Login Error:', err.message); // For debugging
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithPopup(auth, provider); // Removed unused 'result'
       navigate('/dashboard');
     } catch (err) {
       setError('Google Sign-In failed');
+      console.error('Google Sign-In Error:', err.message); // For debugging
+      // Check specific Firebase errors
+      if (err.code === 'auth/popup-closed-by-user') {
+        setError('Popup was closed by the user.');
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        setError('Popup request was cancelled.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError('Unauthorized domain. Please check Firebase settings.');
+      }
     }
   };
 

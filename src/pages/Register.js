@@ -56,7 +56,7 @@ function Register() {
         points: 0,
         xp: 0,
         level: 1,
-        createdAt: new Date()
+        createdAt: new Date(),
       });
 
       navigate('/dashboard');
@@ -71,84 +71,92 @@ function Register() {
   };
 
   return (
-    <div className="auth-container">
-      <h2>Create Account</h2>
-      <form onSubmit={handleRegister}>
-        <input
-          type="text"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          placeholder="Full Name"
-          required
-        />
-        <input
-          type="email"
-          name="email"
-          value={form.email}
-          onChange={handleChange}
-          placeholder="Email"
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          value={form.password}
-          onChange={handleChange}
-          placeholder="Password"
-          required
-        />
-        <input
-          type="number"
-          name="age"
-          value={form.age}
-          onChange={handleChange}
-          placeholder="Age"
-          min="10"
-          required
-        />
-        <input
-          type="number"
-          name="height"
-          value={form.height}
-          onChange={handleChange}
-          placeholder="Height (cm)"
-          min="50"
-          required
-        />
-        <input
-          type="number"
-          name="weight"
-          value={form.weight}
-          onChange={handleChange}
-          placeholder="Weight (kg)"
-          min="20"
-          required
-        />
-
-        <select
-          name="activity"
-          value={form.activity}
-          onChange={handleChange}
-          required
-        >
-          <option value="">Select Activity Level</option>
-          <option value="not_active">🛋️ Not Active</option>
-          <option value="slightly_active">🚶 Slightly Active</option>
-          <option value="active">🏃 Active</option>
-          <option value="very_active">💪 Very Active</option>
-        </select>
-
-        <button type="submit" disabled={loading}>
-          {loading ? 'Registering...' : 'Register'}
-        </button>
-
-        {error && <p className="error">{error}</p>}
-      </form>
-
-      <p>
-        Already have an account? <Link to="/">Login</Link>
-      </p>
+    <div className="login-page">
+      <video className="login-bg-video" autoPlay loop muted playsInline>
+        <source src="/videos/register-bg.mp4" type="video/mp4" />
+      </video>
+      <div className="login-container">
+        <h2 className="login-title">Create Account</h2>
+        <form className="login-form" onSubmit={handleRegister}>
+          <input
+            type="text"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Full Name"
+            className="login-input"
+            required
+          />
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="Email"
+            className="login-input"
+            required
+          />
+          <input
+            type="password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="Password"
+            className="login-input"
+            required
+          />
+          <input
+            type="number"
+            name="age"
+            value={form.age}
+            onChange={handleChange}
+            placeholder="Age"
+            min="10"
+            className="login-input"
+            required
+          />
+          <input
+            type="number"
+            name="height"
+            value={form.height}
+            onChange={handleChange}
+            placeholder="Height (cm)"
+            min="50"
+            className="login-input"
+            required
+          />
+          <input
+            type="number"
+            name="weight"
+            value={form.weight}
+            onChange={handleChange}
+            placeholder="Weight (kg)"
+            min="20"
+            className="login-input"
+            required
+          />
+          <select
+            name="activity"
+            value={form.activity}
+            onChange={handleChange}
+            className="login-input"
+            required
+          >
+            <option value="">Select Activity Level</option>
+            <option value="not_active">🛋️ Not Active</option>
+            <option value="slightly_active">🚶 Slightly Active</option>
+            <option value="active">🏃 Active</option>
+            <option value="very_active">💪 Very Active</option>
+          </select>
+          <button type="submit" className="login-button" disabled={loading}>
+            {loading ? 'Registering...' : 'Register'}
+          </button>
+          {error && <p className="login-error">{error}</p>}
+        </form>
+        <p className="login-register">
+          Already have an account? <Link to="/">Login</Link>
+        </p>
+      </div>
     </div>
   );
 }
