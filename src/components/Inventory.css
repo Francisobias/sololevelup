@@ -1,0 +1,29 @@
+.inventory-container {
+    padding: 20px;
+    color: #00ffea;
+  }
+  
+  .inventory-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .potion-card {
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid #00ffff;
+    padding: 10px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .potion-card:hover {
+    background: rgba(0, 255, 255, 0.3);
+  }
+  
+  .potion-card.used {
+    opacity: 0.5;
+    text-decoration: line-through;
+  }
+  

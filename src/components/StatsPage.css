@@ -1,0 +1,97 @@
+.stats-wrapper {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.background-video {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -1;
+  opacity: 1;
+  filter: brightness(0.75);
+}
+
+.stats-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  background-color: rgba(30, 30, 30, 0.75);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 1;
+}
+
+.stats-title {
+  font-size: 2rem;
+  text-align: center;
+  color: #00ffc8;
+  margin-bottom: 1.5rem;
+}
+
+.stats-overview p {
+  margin: 0.5rem 0;
+}
+
+.stats-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #2c2c2c;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+
+.stat-row:hover {
+  transform: scale(1.02);
+}
+
+.stat-row button {
+  background-color: #007bff;
+  border: none;
+  color: #fff;
+  font-size: 1.25rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.stat-row button:hover {
+  background-color: #0056b3;
+}
+
+.retry-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.retry-button:hover {
+  background-color: #0056b3;
+}
+
+.stats-loading,
+.stats-error {
+  text-align: center;
+  padding: 2rem;
+}
