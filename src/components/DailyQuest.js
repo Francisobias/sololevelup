@@ -12,11 +12,12 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Swal from 'sweetalert2';
 import './DailyQuest.css';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
+const REST_DURATION_MS = 30 * 1000; // 30 seconds for rest period
 
 const DailyQuest = () => {
   const [quests, setQuests] = useState([]);
@@ -29,11 +30,14 @@ const DailyQuest = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [showWarningBg, setShowWarningBg] = useState(false);
+  const [restTime, setRestTime] = useState(null); // State for rest timer
   const intervalRef = useRef(null);
+  const restIntervalRef = useRef(null); // Ref for rest timer interval
   const location = useLocation();
 
   const completeSoundRef = useRef(null);
   const warningSoundRef = useRef(null);
+  const restCompleteSoundRef = useRef(null); // Ref for rest timer completion sound
 
   const convertToDate = (timestamp) =>
     timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
@@ -55,12 +59,72 @@ const DailyQuest = () => {
   const enableAudio = useCallback(() => {
     if (!audioEnabled) {
       setAudioEnabled(true);
+
       const silentAudio = new Audio('/sounds/silent.mp3');
+
+      // Check if the user previously opted out of the prompt
+      const dontShowAgain = localStorage.getItem('dontShowAudioPrompt');
+      if (dontShowAgain === 'true') {
+        silentAudio.play().catch(() => {
+          console.log('Silent audio playback failed');
+        });
+        return;
+      }
+
       silentAudio.play().catch(() => {
         console.log('Silent audio playback failed');
+
+        Swal.fire({
+          icon: 'info',
+          title: 'Enable Audio',
+          html: `
+            <p>Audio and speech were blocked. Interact with the page to enable sound.</p>
+            <label style="display: flex; align-items: center; margin-top: 1rem;">
+              <input type="checkbox" id="dont-show-again-checkbox" style="margin-right: 0.5rem;" />
+              Don't show this again
+            </label>
+          `,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#00ffc8',
+          background: '#1a1a1a',
+          color: '#fff',
+          didClose: () => {
+            const checkbox = document.getElementById('dont-show-again-checkbox');
+            if (checkbox && checkbox.checked) {
+              localStorage.setItem('dontShowAudioPrompt', 'true');
+            }
+          },
+        });
       });
     }
   }, [audioEnabled]);
+
+  const speak = (text, lang = 'en-US') => {
+    if (audioEnabled && window.speechSynthesis) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+
+      if (lang === 'fil-PH') {
+        const voices = window.speechSynthesis.getVoices();
+        const filVoice = voices.find((voice) => voice.lang === 'fil-PH' || voice.lang === 'tl-PH');
+        if (filVoice) {
+          utterance.voice = filVoice;
+        } else {
+          console.warn('No Filipino voice available, falling back to en-US');
+          utterance.lang = 'en-US';
+        }
+      }
+
+      utterance.volume = 1;
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    } else if (!window.speechSynthesis) {
+      console.error('SpeechSynthesis not supported in this browser');
+    } else {
+      console.log('TTS skipped: audio not enabled');
+    }
+  };
 
   const fetchQuests = useCallback(async (uid) => {
     setLoading(true);
@@ -130,7 +194,7 @@ const DailyQuest = () => {
             Swal.fire({
               icon: 'info',
               title: 'Enable Audio',
-              text: 'Audio playback was blocked. Interact with the page (e.g., click a button) to enable sound.',
+              text: 'Audio and speech were blocked. Interact with the page to enable sound.',
               confirmButtonColor: '#ff0044',
               background: '#1a1a1a',
               color: '#fff',
@@ -184,6 +248,55 @@ const DailyQuest = () => {
     }
   }, [quests]);
 
+  const startRestTimer = () => {
+    setRestTime(REST_DURATION_MS);
+
+    if (restIntervalRef.current) {
+      clearInterval(restIntervalRef.current);
+    }
+
+    restIntervalRef.current = setInterval(() => {
+      setRestTime((prev) => {
+        if (prev <= 1000) {
+          clearInterval(restIntervalRef.current);
+          restIntervalRef.current = null;
+          if (restCompleteSoundRef.current && audioEnabled) {
+            restCompleteSoundRef.current.play().catch((error) => {
+              console.error('Rest complete sound playback failed:', error);
+            });
+          }
+          speak('Rest Complete', 'fil-PH');
+          return null;
+        }
+        return prev - 1000;
+      });
+    }, 1000);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      Swal.fire({
+        icon: 'success',
+        title: 'Logged Out',
+        text: 'You have been successfully logged out.',
+        confirmButtonColor: '#00ffc8',
+        background: '#1a1a1a',
+        color: '#fff',
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Logout Failed',
+        text: 'An error occurred while logging out. Please try again.',
+        confirmButtonColor: '#ff0044',
+        background: '#1a1a1a',
+        color: '#fff',
+      });
+    }
+  };
+
   useEffect(() => {
     const handleAuthStateChange = (firebaseUser) => {
       if (firebaseUser) {
@@ -195,6 +308,10 @@ const DailyQuest = () => {
           }
           fetchQuests(firebaseUser.uid);
         });
+      } else {
+        setUser(null);
+        setQuests([]);
+        setLoading(false);
       }
     };
 
@@ -210,6 +327,7 @@ const DailyQuest = () => {
     return () => {
       unsubscribe();
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (restIntervalRef.current) clearInterval(restIntervalRef.current);
     };
   }, [fetchQuests, location]);
 
@@ -227,7 +345,6 @@ const DailyQuest = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fallback to ensure background switches when quests are completed
   useEffect(() => {
     if (user && quests.length > 0) {
       const today = new Date().toISOString().split('T')[0];
@@ -241,11 +358,26 @@ const DailyQuest = () => {
     }
   }, [quests, user]);
 
+  useEffect(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        console.log('TTS voices loaded:', window.speechSynthesis.getVoices());
+      };
+    }
+  }, []);
+
   const formatTime = (ms) => {
     if (ms <= 0) return '00:00';
     const min = Math.floor(ms / 60000);
     const sec = Math.floor((ms % 60000) / 1000);
     return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const formatRestTime = (ms) => {
+    if (ms <= 0) return '00';
+    const sec = Math.floor(ms / 1000);
+    return `${sec.toString().padStart(2, '0')}`;
   };
 
   const formatDateTime = (date) => {
@@ -286,7 +418,12 @@ const DailyQuest = () => {
   };
 
   const markAsCompleted = async (id) => {
-    if (!user) return;
+    if (!user || restTime !== null) return;
+    const quest = quests.find((q) => q.id === id);
+    if (!quest) return;
+
+    enableAudio();
+
     await updateDoc(doc(db, 'quests', id), { completed: true });
 
     if (completeSoundRef.current && audioEnabled) {
@@ -294,6 +431,8 @@ const DailyQuest = () => {
         console.error('Complete sound playback failed:', error);
       });
     }
+
+    speak(`${quest.title} completed!`, 'en-US');
 
     const userRef = doc(db, 'users', user.uid);
     const snap = await getDoc(userRef);
@@ -304,6 +443,7 @@ const DailyQuest = () => {
 
     await fetchQuests(user.uid);
     startCountdown();
+    startRestTimer();
   };
 
   const filtered = quests.filter(
@@ -346,6 +486,12 @@ const DailyQuest = () => {
           </div>
         )}
 
+        {restTime !== null && (
+          <div className="rest-timer">
+            🛌 Rest: {formatRestTime(restTime)}s
+          </div>
+        )}
+
         <div className="date-filter">
           <label>📅 Select Date:</label>
           <input
@@ -356,9 +502,16 @@ const DailyQuest = () => {
           />
         </div>
 
-        <button className="add-quest-btn" onClick={addQuest} disabled={!user || loading}>
-          ➕ Add Workout Routine
-        </button>
+        <div className="button-group">
+          <button className="add-quest-btn" onClick={addQuest} disabled={!user || loading}>
+            Start Quest
+          </button>
+          {user && (
+            <button className="logout-btn" onClick={handleLogout}>
+              🚪 Logout
+            </button>
+          )}
+        </div>
 
         {loading ? (
           <p>Loading quests...</p>
@@ -372,7 +525,11 @@ const DailyQuest = () => {
                   {q.title} - <strong>{q.completed ? '✅ Done' : '⏳ Pending'}</strong>
                 </span>
                 {!q.completed && (
-                  <button className="complete-btn" onClick={() => markAsCompleted(q.id)}>
+                  <button
+                    className="complete-btn"
+                    onClick={() => markAsCompleted(q.id)}
+                    disabled={restTime !== null}
+                  >
                     ✔ Complete
                   </button>
                 )}

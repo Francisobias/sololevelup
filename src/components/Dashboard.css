@@ -431,3 +431,38 @@ body {
     box-shadow: 0 0 5px rgba(0, 255, 255, 0.4);
   }
 }
+
+.level-display {
+  font-size: 1.5rem; /* Increase font size for prominence */
+  font-weight: bold;
+  color: #00ffc8; /* Bright color to match theme */
+  margin-left: 1rem;
+  text-shadow: 0 0 8px rgba(0, 255, 200, 0.8); /* Glow effect */
+  display: inline-block; /* Ensure it’s not hidden */
+  position: relative; /* Prevent overlap */
+  z-index: 10; /* Ensure it’s above other elements */
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Space out title and level */
+  padding: 1rem;
+}
+
+.level-up-burst {
+  font-size: 1.8rem;
+  color: #ffd700; /* Gold color for level-up effect */
+  text-align: center;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+}
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.level-display--updated {
+  animation: pulse 0.5s ease-in-out 2;
+}

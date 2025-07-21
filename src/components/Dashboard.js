@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
@@ -9,8 +9,36 @@ import HoloTerminal from './HoloTerminal';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Dashboard.css';
 
+// Move speak function outside the component
+const speak = (text, lang = 'en-US') => {
+  if (window.speechSynthesis) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.volume = 1;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+  } else {
+    console.error('SpeechSynthesis not supported in this browser');
+  }
+};
+
+// Move getTimeBasedGreeting function outside the component, accepting userName and userEmail as parameters
+const getTimeBasedGreeting = (userName, userEmail) => {
+  const name = userName || userEmail.split('@')[0];
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    return `Good morning, Hunter ${name}, start your quest today!`;
+  } else if (hour < 17) {
+    return `Good afternoon, Hunter ${name}, start your quest!`;
+  } else {
+    return `Good evening, Hunter ${name}, start your quest!`;
+  }
+};
+
 function Dashboard() {
   const navigate = useNavigate();
+  const hasGreetedRef = useRef(false); // Track if greeting has been spoken
 
   const defaultStats = useMemo(() => ({
     strength: 0,
@@ -29,8 +57,27 @@ function Dashboard() {
   const [levelUp, setLevelUp] = useState(false);
   const [showTerminal, setShowTerminal] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
-  const capitalize = (name) => name ? name.charAt(0).toUpperCase() + name.slice(1) : '';
+  const capitalize = (name) => (name ? name.charAt(0).toUpperCase() + name.slice(1) : '');
+
+  const enableAudio = useCallback(() => {
+    if (!audioEnabled) {
+      setAudioEnabled(true);
+      const silentAudio = new Audio('/sounds/silent.mp3');
+      silentAudio.play().catch(() => {
+        console.log('Silent audio playback failed');
+        Swal.fire({
+          icon: 'info',
+          title: 'Enable Audio',
+          text: 'Audio and speech were blocked. Interact with the page to enable sound.',
+          confirmButtonColor: '#00ffc8',
+          background: '#1a1a1a',
+          color: '#fff',
+        });
+      });
+    }
+  }, [audioEnabled]);
 
   const loadStats = useCallback(async (user) => {
     setIsLoading(true);
@@ -39,7 +86,7 @@ function Dashboard() {
       const userRef = doc(db, 'users', user.uid);
       const snapshot = await getDoc(userRef);
       const data = snapshot.exists() ? snapshot.data() : {};
-      const validatedStats = { ...defaultStats };
+      const validatedStats = { ...defaultStats};
 
       for (const key in validatedStats) {
         validatedStats[key] = typeof data[key] === 'number' ? data[key] : defaultStats[key];
@@ -49,13 +96,20 @@ function Dashboard() {
       setUserName(capitalize(data.name || ''));
       setUserEmail(user.email || '');
       await setDoc(userRef, validatedStats, { merge: true });
+
+      // Trigger one-time TTS greeting
+      if (!hasGreetedRef.current) {
+        enableAudio();
+        speak(getTimeBasedGreeting(userName, userEmail), 'en-US');
+        hasGreetedRef.current = true;
+      }
     } catch (err) {
       console.error('Error loading stats:', err);
       setError(err.message || 'Something went wrong.');
     } finally {
       setIsLoading(false);
     }
-  }, [defaultStats]);
+  }, [defaultStats, enableAudio, userEmail, userName]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -75,6 +129,15 @@ function Dashboard() {
       clearInterval(interval);
     };
   }, [loadStats]);
+
+  useEffect(() => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        console.log('TTS voices loaded:', window.speechSynthesis.getVoices());
+      };
+    }
+  }, []);
 
   const handleUpgradeStat = useCallback(async (statToUpgrade) => {
     if (stats.points <= 0) {
@@ -132,19 +195,22 @@ function Dashboard() {
     }
   }, [stats]);
 
+  
+
   const handleNavigation = useCallback((path) => {
+    enableAudio();
     navigate(path, { state: { selectedDate: currentDate } });
-  }, [navigate, currentDate]);
+  }, [navigate, currentDate, enableAudio]);
 
   const xpProgress = Math.min(Math.max(stats.xp || 0, 0), 100);
 
   const renderBackgroundVideo = () => (
-    <video 
-      className="background-video" 
-      autoPlay 
-      loop 
-      muted 
-      playsInline 
+    <video
+      className="background-video"
+      autoPlay
+      loop
+      muted
+      playsInline
       aria-hidden="true"
     >
       <source src="/videos/dashboard-bg.mp4" type="video/mp4" />
@@ -156,15 +222,15 @@ function Dashboard() {
     return (
       <>
         {renderBackgroundVideo()}
-        <motion.div 
-          className="dashboard-container dashboard-loading" 
-          initial={{ opacity: 0 }} 
+        <motion.div
+          className="dashboard-container dashboard-loading"
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
           <motion.div
             className="spinner"
             animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
           />
           <p>Loading your hunter stats...</p>
         </motion.div>
@@ -176,9 +242,9 @@ function Dashboard() {
     return (
       <>
         {renderBackgroundVideo()}
-        <motion.div 
-          className="dashboard-container dashboard-error" 
-          initial={{ opacity: 0 }} 
+        <motion.div
+          className="dashboard-container dashboard-error"
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
           <p className="error-message">{error}</p>
@@ -221,7 +287,7 @@ function Dashboard() {
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ duration: 0.6 }}
               >
-                🎉 Level Up!
+                🎉 Level Up! Now Level {stats.level}
               </motion.div>
             )}
 
@@ -229,7 +295,14 @@ function Dashboard() {
               <h1 className="dashboard-title">
                 Welcome, Hunter {userName || userEmail.split('@')[0]}
               </h1>
-              <span className="level-display">Level {stats.level}</span>
+              <motion.span
+                className="level-display"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
+                Level {stats.level || 1}
+              </motion.span>
             </header>
 
             <section className="stats-summary">
@@ -254,7 +327,10 @@ function Dashboard() {
                     <motion.button
                       whileTap={{ scale: 0.85 }}
                       whileHover={{ scale: 1.05 }}
-                      onClick={() => handleUpgradeStat(stat)}
+                      onClick={() => {
+                        enableAudio();
+                        handleUpgradeStat(stat);
+                      }}
                       disabled={stats.points <= 0}
                       className="upgrade-button"
                     >
@@ -288,7 +364,10 @@ function Dashboard() {
               <motion.button
                 whileHover={{ scale: 1.05, backgroundColor: '#00ffc8', color: '#000' }}
                 transition={{ type: 'spring', stiffness: 300 }}
-                onClick={() => setShowTerminal(true)}
+                onClick={() => {
+                  enableAudio();
+                  setShowTerminal(true);
+                }}
               >
                 Open Holographic Terminal
               </motion.button>
