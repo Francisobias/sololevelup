@@ -12,7 +12,7 @@ import {
   query,
   where,
 } from 'firebase/firestore';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import Swal from 'sweetalert2';
 import './DailyQuest.css';
 
@@ -57,47 +57,48 @@ const DailyQuest = () => {
   };
 
   const enableAudio = useCallback(() => {
-    if (!audioEnabled) {
-      setAudioEnabled(true);
+  if (!audioEnabled) {
+    setAudioEnabled(true);
 
-      const silentAudio = new Audio('/sounds/silent.mp3');
+    const silentAudio = new Audio('/sounds/silent.mp3');
 
-      // Check if the user previously opted out of the prompt
-      const dontShowAgain = localStorage.getItem('dontShowAudioPrompt');
-      if (dontShowAgain === 'true') {
-        silentAudio.play().catch(() => {
-          console.log('Silent audio playback failed');
-        });
-        return;
-      }
-
+    // Check if the user previously opted out of the prompt
+    const dontShowAgain = localStorage.getItem('dontShowAudioPrompt');
+    if (dontShowAgain === 'true') {
       silentAudio.play().catch(() => {
         console.log('Silent audio playback failed');
-
-        Swal.fire({
-          icon: 'info',
-          title: 'Enable Audio',
-          html: `
-            <p>Audio and speech were blocked. Interact with the page to enable sound.</p>
-            <label style="display: flex; align-items: center; margin-top: 1rem;">
-              <input type="checkbox" id="dont-show-again-checkbox" style="margin-right: 0.5rem;" />
-              Don't show this again
-            </label>
-          `,
-          confirmButtonText: 'OK',
-          confirmButtonColor: '#00ffc8',
-          background: '#1a1a1a',
-          color: '#fff',
-          didClose: () => {
-            const checkbox = document.getElementById('dont-show-again-checkbox');
-            if (checkbox && checkbox.checked) {
-              localStorage.setItem('dontShowAudioPrompt', 'true');
-            }
-          },
-        });
       });
+      return;
     }
-  }, [audioEnabled]);
+
+    silentAudio.play().catch(() => {
+      console.log('Silent audio playback failed');
+
+      Swal.fire({
+        icon: 'info',
+        title: 'Enable Audio',
+        html: `
+          <p>Audio and speech were blocked. Interact with the page to enable sound.</p>
+          <label style="display: flex; align-items: center; margin-top: 1rem;">
+            <input type="checkbox" id="dont-show-again-checkbox" style="margin-right: 0.5rem;" />
+            Don't show this again
+          </label>
+        `,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#00ffc8',
+        background: '#1a1a1a',
+        color: '#fff',
+        didClose: () => {
+          const checkbox = document.getElementById('dont-show-again-checkbox');
+          if (checkbox && checkbox.checked) {
+            localStorage.setItem('dontShowAudioPrompt', 'true');
+          }
+        },
+      });
+    });
+  }
+}, [audioEnabled]);
+
 
   const speak = (text, lang = 'en-US') => {
     if (audioEnabled && window.speechSynthesis) {
@@ -268,33 +269,9 @@ const DailyQuest = () => {
           speak('Rest Complete', 'fil-PH');
           return null;
         }
-        return prev - 1000;
+        
       });
     }, 1000);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      Swal.fire({
-        icon: 'success',
-        title: 'Logged Out',
-        text: 'You have been successfully logged out.',
-        confirmButtonColor: '#00ffc8',
-        background: '#1a1a1a',
-        color: '#fff',
-      });
-    } catch (error) {
-      console.error('Logout failed:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Logout Failed',
-        text: 'An error occurred while logging out. Please try again.',
-        confirmButtonColor: '#ff0044',
-        background: '#1a1a1a',
-        color: '#fff',
-      });
-    }
   };
 
   useEffect(() => {
@@ -308,10 +285,6 @@ const DailyQuest = () => {
           }
           fetchQuests(firebaseUser.uid);
         });
-      } else {
-        setUser(null);
-        setQuests([]);
-        setLoading(false);
       }
     };
 
@@ -502,16 +475,9 @@ const DailyQuest = () => {
           />
         </div>
 
-        <div className="button-group">
-          <button className="add-quest-btn" onClick={addQuest} disabled={!user || loading}>
-            Start Quest
-          </button>
-          {user && (
-            <button className="logout-btn" onClick={handleLogout}>
-              🚪 Logout
-            </button>
-          )}
-        </div>
+        <button className="add-quest-btn" onClick={addQuest} disabled={!user || loading}>
+          Start Quest
+        </button>
 
         {loading ? (
           <p>Loading quests...</p>
@@ -541,6 +507,7 @@ const DailyQuest = () => {
 
       <audio ref={completeSoundRef} src="/sounds/quest-complete.mp3" preload="auto" />
       <audio ref={warningSoundRef} src="/sounds/countdown-warning.mp3" preload="auto" />
+      
     </div>
   );
 };
