@@ -2,14 +2,13 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import Swal from 'sweetalert2';
 import StatsChart from './StatsChart';
 import HoloTerminal from './HoloTerminal';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Dashboard.css';
 
-// Move speak function outside the component
 const speak = (text, lang = 'en-US') => {
   if (window.speechSynthesis) {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -23,7 +22,6 @@ const speak = (text, lang = 'en-US') => {
   }
 };
 
-// Move getTimeBasedGreeting function outside the component, accepting userName and userEmail as parameters
 const getTimeBasedGreeting = (userName, userEmail) => {
   const name = userName || userEmail.split('@')[0];
   const hour = new Date().getHours();
@@ -38,7 +36,7 @@ const getTimeBasedGreeting = (userName, userEmail) => {
 
 function Dashboard() {
   const navigate = useNavigate();
-  const hasGreetedRef = useRef(false); // Track if greeting has been spoken
+  const hasGreetedRef = useRef(false);
 
   const defaultStats = useMemo(() => ({
     strength: 0,
@@ -97,7 +95,6 @@ function Dashboard() {
       setUserEmail(user.email || '');
       await setDoc(userRef, validatedStats, { merge: true });
 
-      // Trigger one-time TTS greeting
       if (!hasGreetedRef.current) {
         enableAudio();
         speak(getTimeBasedGreeting(userName, userEmail), 'en-US');
@@ -111,6 +108,50 @@ function Dashboard() {
     }
   }, [defaultStats, enableAudio, userEmail, userName]);
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      Swal.fire({
+        icon: 'success',
+        title: 'Logged Out',
+        text: 'You have been successfully logged out.',
+        confirmButtonColor: '#00ffc8',
+        background: '#1a1a1a',
+        color: '#fff',
+      });
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Logout Failed',
+        text: 'An error occurred while logging out. Please try again.',
+        confirmButtonColor: '#ff0044',
+        background: '#1a1a1a',
+        color: '#fff',
+      });
+    }
+  };
+
+  const handleDateChange = useCallback((direction) => {
+    enableAudio();
+    const current = new Date(currentDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (direction === 'prev') {
+      const prevDay = new Date(current);
+      prevDay.setDate(current.getDate() - 1);
+      setCurrentDate(prevDay.toISOString().split('T')[0]);
+      speak('Previous day selected', 'en-US');
+    } else if (direction === 'next' && current < today) {
+      const nextDay = new Date(current);
+      nextDay.setDate(current.getDate() + 1);
+      setCurrentDate(nextDay.toISOString().split('T')[0]);
+      speak('Next day selected', 'en-US');
+    }
+  }, [currentDate, enableAudio]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -122,13 +163,16 @@ function Dashboard() {
     });
 
     const interval = setInterval(() => {
-      setCurrentDate(new Date().toISOString().split('T')[0]);
+      const today = new Date().toISOString().split('T')[0];
+      if (currentDate !== today) {
+        setCurrentDate(today);
+      }
     }, 60000);
     return () => {
       unsubscribe();
       clearInterval(interval);
     };
-  }, [loadStats]);
+  }, [loadStats, currentDate]);
 
   useEffect(() => {
     if (window.speechSynthesis) {
@@ -195,14 +239,14 @@ function Dashboard() {
     }
   }, [stats]);
 
-  
-
   const handleNavigation = useCallback((path) => {
     enableAudio();
     navigate(path, { state: { selectedDate: currentDate } });
   }, [navigate, currentDate, enableAudio]);
 
   const xpProgress = Math.min(Math.max(stats.xp || 0, 0), 100);
+  const today = new Date().toISOString().split('T')[0];
+  const isNextDisabled = currentDate === today;
 
   const renderBackgroundVideo = () => (
     <video
@@ -305,6 +349,36 @@ function Dashboard() {
               </motion.span>
             </header>
 
+            <section className="date-navigator">
+              <h2 className="date-heading">Select Date</h2>
+              <div className="date-controls">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.85 }}
+                  onClick={() => handleDateChange('prev')}
+                  className="date-button"
+                >
+                  ← Previous
+                </motion.button>
+                <span className="current-date">
+                  {new Date(currentDate).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </span>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.85 }}
+                  onClick={() => handleDateChange('next')}
+                  disabled={isNextDisabled}
+                  className="date-button"
+                >
+                  Next →
+                </motion.button>
+              </div>
+            </section>
+
             <section className="stats-summary">
               <h2 className="stats-heading">Stats Overview</h2>
               <div className="xp-progress">
@@ -370,6 +444,23 @@ function Dashboard() {
                 }}
               >
                 Open Holographic Terminal
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05, backgroundColor: '#00ffc8', color: '#000' }}
+                transition={{ type: 'spring', stiffness: 300 }}
+                onClick={() => handleNavigation('/leaderboard')}
+              >
+                Leaderboard
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05, backgroundColor: '#ff0044', color: '#fff' }}
+                transition={{ type: 'spring', stiffness: 300 }}
+                onClick={handleLogout}
+                className="logout-button"
+              >
+                🚪 Logout
               </motion.button>
             </nav>
           </motion.div>

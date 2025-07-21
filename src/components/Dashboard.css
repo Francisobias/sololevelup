@@ -466,3 +466,98 @@ body {
 .level-display--updated {
   animation: pulse 0.5s ease-in-out 2;
 }
+.dashboard-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.logout-button {
+  background-color: #ff0044;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+.logout-button:hover {
+  background-color: #cc0033;
+}
+.date-navigator {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.date-heading {
+  font-size: 1.2rem;
+  color: #00ffc8;
+  margin-bottom: 0.5rem;
+}
+
+.date-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.current-date {
+  font-size: 1rem;
+  color: #fff;
+  font-weight: bold;
+}
+
+.date-button {
+  background-color: #00ffc8;
+  color: #000;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+.date-button:hover {
+  background-color: #00cc9f;
+}
+
+.date-button:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+}
+
+.dashboard-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dashboard-buttons button {
+  background-color: #333;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+.dashboard-buttons button:hover {
+  background-color: #00cc9f;
+}
+
+.logout-button {
+  background-color: #ff0044;
+  color: #fff;
+}
+
+.logout-button:hover {
+  background-color: #cc0033;
+}
