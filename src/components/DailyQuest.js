@@ -57,48 +57,47 @@ const DailyQuest = () => {
   };
 
   const enableAudio = useCallback(() => {
-  if (!audioEnabled) {
-    setAudioEnabled(true);
+    if (!audioEnabled) {
+      setAudioEnabled(true);
 
-    const silentAudio = new Audio('/sounds/silent.mp3');
+      const silentAudio = new Audio('/sounds/silent.mp3');
 
-    // Check if the user previously opted out of the prompt
-    const dontShowAgain = localStorage.getItem('dontShowAudioPrompt');
-    if (dontShowAgain === 'true') {
+      // Check if the user previously opted out of the prompt
+      const dontShowAgain = localStorage.getItem('dontShowAudioPrompt');
+      if (dontShowAgain === 'true') {
+        silentAudio.play().catch(() => {
+          console.log('Silent audio playback failed');
+        });
+        return;
+      }
+
       silentAudio.play().catch(() => {
         console.log('Silent audio playback failed');
+
+        Swal.fire({
+          icon: 'info',
+          title: 'Enable Audio',
+          html: `
+            <p>Audio and speech were blocked. Interact with the page to enable sound.</p>
+            <label style="display: flex; align-items: center; margin-top: 1rem;">
+              <input type="checkbox" id="dont-show-again-checkbox" style="margin-right: 0.5rem;" />
+              Don't show this again
+            </label>
+          `,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#00ffc8',
+          background: '#1a1a1a',
+          color: '#fff',
+          didClose: () => {
+            const checkbox = document.getElementById('dont-show-again-checkbox');
+            if (checkbox && checkbox.checked) {
+              localStorage.setItem('dontShowAudioPrompt', 'true');
+            }
+          },
+        });
       });
-      return;
     }
-
-    silentAudio.play().catch(() => {
-      console.log('Silent audio playback failed');
-
-      Swal.fire({
-        icon: 'info',
-        title: 'Enable Audio',
-        html: `
-          <p>Audio and speech were blocked. Interact with the page to enable sound.</p>
-          <label style="display: flex; align-items: center; margin-top: 1rem;">
-            <input type="checkbox" id="dont-show-again-checkbox" style="margin-right: 0.5rem;" />
-            Don't show this again
-          </label>
-        `,
-        confirmButtonText: 'OK',
-        confirmButtonColor: '#00ffc8',
-        background: '#1a1a1a',
-        color: '#fff',
-        didClose: () => {
-          const checkbox = document.getElementById('dont-show-again-checkbox');
-          if (checkbox && checkbox.checked) {
-            localStorage.setItem('dontShowAudioPrompt', 'true');
-          }
-        },
-      });
-    });
-  }
-}, [audioEnabled]);
-
+  }, [audioEnabled]);
 
   const speak = (text, lang = 'en-US') => {
     if (audioEnabled && window.speechSynthesis) {
@@ -269,7 +268,7 @@ const DailyQuest = () => {
           speak('Rest Complete', 'fil-PH');
           return null;
         }
-        
+        return prev - 1000; // Decrease by 1 second
       });
     }, 1000);
   };
@@ -348,7 +347,7 @@ const DailyQuest = () => {
   };
 
   const formatRestTime = (ms) => {
-    if (ms <= 0) return '00';
+    if (ms === null || ms <= 0) return '00';
     const sec = Math.floor(ms / 1000);
     return `${sec.toString().padStart(2, '0')}`;
   };
@@ -507,7 +506,7 @@ const DailyQuest = () => {
 
       <audio ref={completeSoundRef} src="/sounds/quest-complete.mp3" preload="auto" />
       <audio ref={warningSoundRef} src="/sounds/countdown-warning.mp3" preload="auto" />
-      
+      <audio ref={restCompleteSoundRef} src="/sounds/rest-complete.mp3" preload="auto" />
     </div>
   );
 };

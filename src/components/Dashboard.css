@@ -561,3 +561,28 @@ body {
 .logout-button:hover {
   background-color: #cc0033;
 }
+/* components/Dashboard.css */
+/* ... (existing styles remain unchanged) ... */
+
+.achievements-section {
+  margin-bottom: 2rem;
+}
+
+.achievements-heading {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: #00ffc8;
+}
+
+.achievements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.achievement-item {
+  background: rgba(0, 255, 200, 0.1);
+  padding: 0.5rem;
+  border-radius: 4px;
+  color: #00ffc8;
+}
